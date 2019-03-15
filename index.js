@@ -6,10 +6,11 @@ const bodyparser = require('body-parser');
 app.use(bodyparser.json());
 
 var mysqlConnection = mysql.createConnection({
-    host: 'localhost',
+    host: 'http://ec2-18-188-57-145.us-east-2.compute.amazonaws.com',
     user: 'tracker',
     password: 'tracker',
-    database: 'tracking'
+    port: '3306',
+    database: 'tracking',
 });
 
 mysqlConnection.connect((err) => {
