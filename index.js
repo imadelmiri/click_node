@@ -31,3 +31,8 @@ app.get('/click', (req, res) => {
             console.log(err);
     });
 });
+
+// test
+app.get('/test', (req, res) => {
+    res.send('Hello and welcome!');
+});
