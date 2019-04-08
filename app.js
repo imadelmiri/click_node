@@ -51,12 +51,13 @@ function getDateTime() {
 
 // click
 app.get('/click', (req, res) => {
-    mysqlConnection.query('INSERT INTO click(email_id, offer_id, adress_ip, now) VALUES(?, ?, ?, ?)', [req.query.email_id, req.query.offer_id, req.query.adress_ip, getDateTime], (err, rows, fields) => {
+    mysqlConnection.query('INSERT INTO click(email_id, offer_id, adress_ip, now) VALUES(?, ?, ?, ?)', [req.query.email_id, req.query.offer_id, '127.0.0.1', getDateTime()], (err, rows, fields) => {
         if(!err) {
             mysqlConnection.query('SELECT offer_url FROM offer WHERE offer_id = ?', [req.query.offer_id], (err, result, fields) => {
                 if(!err) {
                     var myUrl =result[0].offer_url;
                     res.redirect(myUrl);
+                    //console.log(myUrl);
                 }
                 else
                     console.log(err);
