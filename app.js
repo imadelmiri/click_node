@@ -1,9 +1,15 @@
 const db_config = require('./config/db_config.json');
 const http_config = require('./config/http_config.json');
+const log_config = require('./config/log_config.json');
 const mysql = require('mysql');
 const express = require('express');
 var app = express();
 const bodyparser = require('body-parser');
+var path = require('path');
+const app_log = require('simple-node-logger').createSimpleLogger(log_config.app_log);
+const unsub_log = require('simple-node-logger').createSimpleLogger(log_config.unsub_log);
+const open_log = require('simple-node-logger').createSimpleLogger(log_config.open_log);
+const click_log = require('simple-node-logger').createSimpleLogger(log_config.click_log);
 
 app.use(bodyparser.json());
 
@@ -16,13 +22,25 @@ var mysqlConnection = mysql.createConnection({
 });
 
 mysqlConnection.connect((err) => {
-    if(!err)
-        console.log('DB connection succeded');
-    else
-        console.log('DB connection failed \n Error: ' + JSON.stringify(err, undefined, 2)); 
+    if(!err) {
+        app_log.info('Database connection succeded');
+        app.listen(http_config.port, () => {
+            app_log.info("server is running on port: " + http_config.port, '.\n**************************************************************************************************************');
+        }).on('error', function (err) {
+            mysqlConnection.destroy;
+            if(err.errno === 'EADDRINUSE') {
+                app_log.error('Port ', http_config.port, ' is busy, please try again with other port.\n**************************************************************************************************************');
+            } else {
+                app_log.error(err, '.\n**************************************************************************************************************');
+            }
+        });
+    }
+    else {
+        //console.log('DB connection failed \n Error: ' + JSON.stringify(err, undefined, 2)); 
+        //app_log.error('[', new Date().toJSON(), '] ', err, '.\n**************************************************************************************************************');
+        err.sqlMessage != null ? app_log.error('[', new Date().toJSON(), '] ', err.sqlMessage, '.\n**************************************************************************************************************') : app_log.error('[', new Date().toJSON(), '] ', 'Cannot connect to the database server, please verify the host and the port in the config file.\n**************************************************************************************************************');
+    }
 });
-
-app.listen(http_config.port, () => console.log('Express server is running at port no : ' + http_config.port));
 
 function getDateTime() {
 
@@ -50,20 +68,53 @@ function getDateTime() {
 }
 
 // click
-app.get('/click', (req, res) => {
-    mysqlConnection.query('INSERT INTO click(email_id, offer_id, adress_ip, now) VALUES(?, ?, ?, ?)', [req.query.email_id, req.query.offer_id, '127.0.0.1', getDateTime()], (err, rows, fields) => {
-        if(!err) {
-            mysqlConnection.query('SELECT offer_url FROM offer WHERE offer_id = ?', [req.query.offer_id], (err, result, fields) => {
-                if(!err) {
-                    var myUrl =result[0].offer_url;
-                    res.redirect(myUrl);
-                    //console.log(myUrl);
+app.get('/click/:emailId/:offerId', (request, response) => {
+    mysqlConnection.query('INSERT INTO click(email_id, offer_id, date_click) VALUES(?, ?, ?)', [request.params.emailId, request.params.offerId, getDateTime()], (err1, rows, fields) => {
+        if(!err1) {
+            mysqlConnection.query('SELECT offer_link FROM offer WHERE id = ?', [request.params.offerId], (err2, result, fields) => {
+                if(!err2) {
+                    var offer_link =result[0].offer_link;
+                    response.redirect(offer_link);
                 }
-                else
-                    console.log(err);
+                else {
+                    click_log.error('[', new Date().toJSON(), '] ', err2.sqlMessage, '\nemail_id: ', request.params.emailId, ', offer_id: ', request.params.offerId, '.\n**************************************************************************************************************');
+                }
             });
         }
-        else
-            console.log(err);
+        else {
+            click_log.error('[', new Date().toJSON(), '] ', err1.sqlMessage, '\nemail_id: ', request.params.emailId, ', offer_id: ', request.params.offerId, '.\n**************************************************************************************************************');
+        }
+    });
+});
+
+// open
+app.get('/:emailId/:offerId/tracker.png', function(request, response, next) {
+    var emailId = request.param.id;
+    var buf = new Buffer([
+        0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00,
+        0x80, 0x00, 0x00, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x2c,
+        0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x02,
+        0x02, 0x44, 0x01, 0x00, 0x3b
+    ]);
+    response.set('Content-Type', 'image/png');
+    response.end(buf, 'binary');
+    //console.log('Email was opened and emailId is: ' + request.params.emailId);
+    mysqlConnection.query('INSERT INTO open(email_id, offer_id, date_open) VALUES(?, ?, ?)', [request.params.emailId, request.params.offerId, getDateTime()], (err, rows, fields) => {
+        if(err) {
+            open_log.error('[', new Date().toJSON(), '] ', err.sqlMessage, '\nemail_id: ', request.params.emailId, ', offer_id: ', request.params.offerId, '.\n**************************************************************************************************************');
+        }
+    });
+});
+
+// unsubscribe
+app.get('/unsubscribe/:emailId/:offerId', function(request, response, next) {
+    mysqlConnection.query('INSERT INTO unsubscribe(email_id, offer_id, date_unsubscribe) VALUES(?, ?, ?)', [request.params.emailId, request.params.offerId, getDateTime()], (err, rows, fields) => {
+        if(err) {
+            response.sendFile(path.join(__dirname+'/error.html'));
+            unsub_log.error('[', new Date().toJSON(), '] ', err.sqlMessage, '\nemail_id: ', request.params.emailId, ', offer_id: ', request.params.offerId, '.\n**************************************************************************************************************');
+        }
+        else {
+            response.sendFile(path.join(__dirname+'/success.html'));
+        }
     });
 });

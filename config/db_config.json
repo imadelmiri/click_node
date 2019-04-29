@@ -3,5 +3,5 @@
     "user": "hbstudent",
     "password": "hbstudent",
     "port": "3306",
-    "database": "employeeDB"
+    "database": "tracking"
 }

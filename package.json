@@ -11,6 +11,9 @@
   "dependencies": {
     "body-parser": "^1.18.2",
     "express": "^4.16.3",
-    "mysql": "^2.15.0"
+    "md5": "^2.2.1",
+    "mysql": "^2.15.0",
+    "node-datetime": "^2.1.2",
+    "simple-node-logger": "^18.12.22"
   }
 }

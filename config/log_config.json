@@ -1,0 +1,6 @@
+{
+    "app_log": "log/app.log",
+    "click_log": "log/click.log",
+    "open_log": "log/open.log",
+    "unsub_log": "log/unsubscribe.log"
+}
