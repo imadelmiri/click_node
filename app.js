@@ -110,11 +110,25 @@ app.get('/:emailId/:offerId/tracker.png', function(request, response, next) {
 app.get('/unsubscribe/:emailId/:offerId', function(request, response, next) {
     mysqlConnection.query('INSERT INTO unsubscribe(email_id, offer_id, date_unsubscribe) VALUES(?, ?, ?)', [request.params.emailId, request.params.offerId, getDateTime()], (err, rows, fields) => {
         if(err) {
-            response.sendFile(path.join(__dirname+'/error.html'));
+            response.sendFile(path.join(__dirname+'/resources/error.html'));
             unsub_log.error('[', new Date().toJSON(), '] ', err.sqlMessage, '\nemail_id: ', request.params.emailId, ', offer_id: ', request.params.offerId, '.\n**************************************************************************************************************');
         }
         else {
-            response.sendFile(path.join(__dirname+'/success.html'));
+            if(request.query.unsub_spons == "yes") {
+                mysqlConnection.query('SELECT sponsor_unsub_link FROM offer WHERE id = ?', [request.params.offerId], (err2, result, fields) => {
+                    if(!err2) {
+                        var unsub_link =result[0].sponsor_unsub_link;
+                        response.redirect(unsub_link);
+                    }
+                    else {
+                        unsub_log.error('[', new Date().toJSON(), '] ', err2.sqlMessage, '\nemail_id: ', request.params.emailId, ', offer_id: ', request.params.offerId, '.\n**************************************************************************************************************');
+                        response.sendFile(path.join(__dirname+'/resources/error.html'));
+                    }
+                });
+            }
+            else {
+                response.sendFile(path.join(__dirname+'/resources/success.html'));
+            }
         }
     });
 });
