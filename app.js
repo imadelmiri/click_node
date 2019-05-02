@@ -42,6 +42,7 @@ mysqlConnection.connect((err) => {
     }
 });
 
+// get datetime yyyy-mm-dd hh:mm:ss
 function getDateTime() {
 
     var date = new Date();
@@ -67,9 +68,20 @@ function getDateTime() {
 
 }
 
+// get ip address of caller
+function getCallerIP(request) {
+    var ip = request.headers['x-forwarded-for'] ||
+        request.connection.remoteAddress ||
+        request.socket.remoteAddress ||
+        request.connection.socket.remoteAddress;
+    ip = ip.split(',')[0];
+    ip = ip.split(':').slice(-1)[0]; //in case the ip returned in a format: "::ffff:146.xxx.xxx.xxx"
+    return ip;
+}
+
 // click
 app.get('/click/:emailId/:offerId', (request, response) => {
-    mysqlConnection.query('INSERT INTO click(email_id, offer_id, date_click) VALUES(?, ?, ?)', [request.params.emailId, request.params.offerId, getDateTime()], (err1, rows, fields) => {
+    mysqlConnection.query('INSERT INTO click(email_id, offer_id, date_click, ip_address) VALUES(?, ?, ?, ?)', [request.params.emailId, request.params.offerId, getDateTime(), getCallerIP(request)], (err1, rows, fields) => {
         if(!err1) {
             mysqlConnection.query('SELECT offer_link FROM offer WHERE id = ?', [request.params.offerId], (err2, result, fields) => {
                 if(!err2) {
@@ -99,7 +111,7 @@ app.get('/:emailId/:offerId/tracker.png', function(request, response, next) {
     response.set('Content-Type', 'image/png');
     response.end(buf, 'binary');
     //console.log('Email was opened and emailId is: ' + request.params.emailId);
-    mysqlConnection.query('INSERT INTO open(email_id, offer_id, date_open) VALUES(?, ?, ?)', [request.params.emailId, request.params.offerId, getDateTime()], (err, rows, fields) => {
+    mysqlConnection.query('INSERT INTO open(email_id, offer_id, date_open, ip_address) VALUES(?, ?, ?, ?)', [request.params.emailId, request.params.offerId, getDateTime(), getCallerIP(request)], (err, rows, fields) => {
         if(err) {
             open_log.error('[', new Date().toJSON(), '] ', err.sqlMessage, '\nemail_id: ', request.params.emailId, ', offer_id: ', request.params.offerId, '.\n**************************************************************************************************************');
         }
@@ -108,7 +120,7 @@ app.get('/:emailId/:offerId/tracker.png', function(request, response, next) {
 
 // unsubscribe
 app.get('/unsubscribe/:emailId/:offerId', function(request, response, next) {
-    mysqlConnection.query('INSERT INTO unsubscribe(email_id, offer_id, date_unsubscribe) VALUES(?, ?, ?)', [request.params.emailId, request.params.offerId, getDateTime()], (err, rows, fields) => {
+    mysqlConnection.query('INSERT INTO unsubscribe(email_id, offer_id, date_unsubscribe, ip_address) VALUES(?, ?, ?, ?)', [request.params.emailId, request.params.offerId, getDateTime(), getCallerIP(request)], (err, rows, fields) => {
         if(err) {
             response.sendFile(path.join(__dirname+'/resources/error.html'));
             unsub_log.error('[', new Date().toJSON(), '] ', err.sqlMessage, '\nemail_id: ', request.params.emailId, ', offer_id: ', request.params.offerId, '.\n**************************************************************************************************************');
@@ -131,18 +143,4 @@ app.get('/unsubscribe/:emailId/:offerId', function(request, response, next) {
             }
         }
     });
-});
-
-//test ip
-function getCallerIP(request) {
-    var ip = request.headers['x-forwarded-for'] ||
-        request.connection.remoteAddress ||
-        request.socket.remoteAddress ||
-        request.connection.socket.remoteAddress;
-    ip = ip.split(',')[0];
-    ip = ip.split(':').slice(-1)[0]; //in case the ip returned in a format: "::ffff:146.xxx.xxx.xxx"
-    return ip;
-}
-app.get('/ip', function(request, response, next) {
-    console.log(getCallerIP(request));
 });
