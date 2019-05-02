@@ -135,9 +135,6 @@ app.get('/unsubscribe/:emailId/:offerId', function(request, response, next) {
 
 //test ip
 app.get('/ip', function(request, response, next) {
-    var ip = (request.headers['x-forwarded-for'] || '').split(',').pop() || 
-    request.connection.remoteAddress || 
-    request.socket.remoteAddress || 
-    request.connection.socket.remoteAddress;
+    var ip = (request.headers['x-forwarded-for'] || '')
     console.log(ip);
 });
