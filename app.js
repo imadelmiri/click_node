@@ -70,12 +70,15 @@ function getDateTime() {
 
 // get ip address of caller
 function getCallerIP(request) {
-    var ip = request.headers['x-forwarded-for'] ||
-        request.connection.remoteAddress ||
-        request.socket.remoteAddress ||
-        request.connection.socket.remoteAddress;
-    ip = ip.split(',')[0];
-    ip = ip.split(':').slice(-1)[0]; //in case the ip returned in a format: "::ffff:146.xxx.xxx.xxx"
+    // nginx reverse proxy
+    var ip = request.headers["X-Real-IP"]
+    // witout nginx reverse proxy
+    // var ip = request.headers['x-forwarded-for'] ||
+    //    request.connection.remoteAddress ||
+    //    request.socket.remoteAddress ||
+    //    request.connection.socket.remoteAddress;
+    // ip = ip.split(',')[0];
+    // ip = ip.split(':').slice(-1)[0]; //in case the ip returned in a format: "::ffff:146.xxx.xxx.xxx"
     return ip;
 }
 
