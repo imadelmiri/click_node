@@ -71,7 +71,7 @@ function getDateTime() {
 // get ip address of caller
 function getCallerIP(request) {
     // nginx reverse proxy
-    var ip = request.headers["X-Real-IP"]
+    var ip = request.headers['x-forwarded-for']
     // witout nginx reverse proxy
     // var ip = request.headers['x-forwarded-for'] ||
     //    request.connection.remoteAddress ||
